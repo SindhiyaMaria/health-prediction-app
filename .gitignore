@@ -1,16 +1,24 @@
+﻿# Virtual Environment
 venv/
+env/
+ENV/
+
+# Environment variables
 .env
+
+# Python cache
 __pycache__/
 *.pyc
-.DS_Store
-streamlit_debug.log
+*.pyo
+*.pyd
+
 # Streamlit
 .streamlit/secrets.toml
 
-# Jupyter / Notebook files (if any)
+# Jupyter
 .ipynb_checkpoints/
 
-# OS generated files
+# OS
 .DS_Store
 Thumbs.db
 
