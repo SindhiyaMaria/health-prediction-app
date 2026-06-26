@@ -1,12 +1,12 @@
 # 🩺 MIRA - Medical Intelligence Health Predictor
 
-A **Streamlit-based healthcare application** developed as part of the **Junior AI/ML Developer Technical Assessment**.
+A **Streamlit-based healthcare application** developed as part of the **AI/ML Developer **.
 
 The application enables users to manage patient records using full **CRUD (Create, Read, Update, Delete)** operations, store data in **PostgreSQL**, and generate **AI-powered health risk predictions** using the **Groq External API** with the **Llama 3.3 70B Versatile** model.
 
 ---
 
-## ✨ Features
+##  Features
 
 - ✅ Create, Read, Update, and Delete (CRUD) patient records
 - ✅ PostgreSQL database integration
@@ -53,7 +53,7 @@ health-prediction-app/
 
 ---
 
-# 🚀 Installation
+#  Installation
 
 ## 1. Clone the Repository
 
@@ -140,7 +140,7 @@ http://localhost:8501
 
 ---
 
-# 🤖 AI Integration
+#  AI Integration
 
 This project uses the **Groq External API** with the **Llama 3.3 70B Versatile** model to generate health risk predictions based on patient blood test parameters.
 
@@ -198,7 +198,7 @@ Fields stored:
 
 ---
 
-# ⚠ Error Handling
+#  Error Handling
 
 The application gracefully handles:
 
@@ -210,7 +210,7 @@ The application gracefully handles:
 
 ---
 
-# 📷 Screenshots
+#  Screenshots
 
 Add screenshots after uploading them to the `images` folder.
 
