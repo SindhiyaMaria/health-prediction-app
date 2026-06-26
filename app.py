@@ -2,10 +2,11 @@ import streamlit as st
 import pandas as pd
 import psycopg2
 from datetime import date
-import ollama
 import re
 from dotenv import load_dotenv
 import os
+from sqlalchemy import create_engine
+from groq import Groq
 
 load_dotenv()
 
@@ -45,9 +46,16 @@ def get_db_connection():
         st.error(f"Database Connection Failed: {str(e)}")
         return None
 
-# ====================== AI REMARKS ======================
+# ====================== AI REMARKS (EXTERNAL Groq API) ======================
 def generate_remarks(data):
+    api_key = os.getenv("GROQ_API_KEY")
+    
+    if not api_key:
+        st.error(" GROQ_API_KEY not found in .env file!")
+        return "AI service unavailable. Please configure GROQ_API_KEY in .env file."
+    
     age = date.today().year - data['dob'].year
+    
     prompt = f"""
 You are a helpful medical AI assistant. Analyze the following blood test results and predict possible health risks.
 
@@ -58,18 +66,24 @@ Haemoglobin: {data['haemoglobin']} g/dL
 Cholesterol: {data['cholesterol']} mg/dL
 
 Provide a structured prediction in this exact format:
-
 Risk Level: [Low/Medium/High]
 Possible Condition: [Short name of possible condition or "No major risks detected"]
 Short Explanation: [2-3 sentences of analysis. Do not give medical advice or recommend actions.]
 
 Be concise and professional.
 """
+
     try:
-        response = ollama.chat(model='llama3', messages=[{'role': 'user', 'content': prompt}])
-        return response['message']['content'].strip()
+        client = Groq(api_key=api_key)
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=600,
+        )
+        return response.choices[0].message.content.strip()
     except Exception as e:
-        st.warning("AI service unavailable.")
+        st.warning(f"AI service error: {str(e)}")
         return "AI analysis temporarily unavailable. Risk assessment could not be generated."
 
 # ====================== VALIDATION ======================
@@ -110,20 +124,46 @@ def create_patient(data):
         st.error(f"Error creating patient: {str(e)}")
         return False
     finally:
-        if cur: cur.close()
+        if 'cur' in locals() and cur: cur.close()
         if conn: conn.close()
 
-def get_all_patients():
-    conn = get_db_connection()
-    if not conn: return pd.DataFrame()
+
+# ====================== DATABASE ENGINE FOR PANDAS ======================
+def get_db_engine():
+    """Create SQLAlchemy engine (recommended for pandas)"""
     try:
-        df = pd.read_sql("""
-            SELECT id, full_name, dob, email, glucose, haemoglobin, cholesterol, remarks, created_at
-            FROM patients ORDER BY created_at DESC
-        """, conn)
+        engine = create_engine(
+            f"postgresql+psycopg2://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@"
+            f"{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5432')}/"
+            f"{os.getenv('DB_NAME')}"
+        )
+        return engine
+    except Exception as e:
+        st.error(f"Failed to create database engine: {str(e)}")
+        return None
+
+
+def get_all_patients():
+    engine = get_db_engine()
+    if not engine:
+        return pd.DataFrame()
+    
+    try:
+        query = """
+            SELECT id, full_name, dob, email, glucose, haemoglobin, 
+                   cholesterol, remarks, created_at
+            FROM patients 
+            ORDER BY created_at ASC
+        """
+        df = pd.read_sql(query, engine)
         return df
+    except Exception as e:
+        st.error(f"Error fetching patients: {str(e)}")
+        return pd.DataFrame()
     finally:
-        conn.close()
+        engine.dispose()  
+
+
 
 def update_patient(pid, data):
     conn = get_db_connection()
@@ -141,7 +181,7 @@ def update_patient(pid, data):
         st.error(f"Error updating patient: {str(e)}")
         return False
     finally:
-        if cur: cur.close()
+        if 'cur' in locals() and cur: cur.close()
         if conn: conn.close()
 
 def delete_patient(pid):
@@ -156,17 +196,17 @@ def delete_patient(pid):
         st.error(f"Error deleting patient: {str(e)}")
         return False
     finally:
-        if cur: cur.close()
+        if 'cur' in locals() and cur: cur.close()
         if conn: conn.close()
 
 # ====================== STREAMLIT APP ======================
 st.set_page_config(page_title="MIRA Health Predictor", layout="wide")
+
 st.markdown("""
     <style>
         .main > div {padding-top: 1rem !important;}
         h1 {margin-bottom: 0.3rem !important;}
         .block-container {padding-top: 1rem !important;}
-        .stSubheader {margin-top: 0.5rem !important;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -184,27 +224,23 @@ st.sidebar.caption("Junior AI/ML Developer Task - Gokul Infocare")
 # ====================== ADD NEW PATIENT ======================
 if menu == "Add New Patient":
     st.subheader("Enter Patient Details")
-   
+    
     with st.form("add_patient"):
         full_name = st.text_input("Full Name*")
-        dob = st.date_input(
-            "Date of Birth*",
-            value=date(2000, 1, 1),
-            min_value=date(1950, 1, 1),
-            max_value=date.today()
-        )
+        dob = st.date_input("Date of Birth*", value=date(2000, 1, 1),
+                            min_value=date(1950, 1, 1), max_value=date.today())
         email = st.text_input("Email Address*")
-       
+        
         col1, col2, col3 = st.columns(3)
-        with col1: 
+        with col1:
             glucose = st.number_input("Glucose (mg/dL)", min_value=0.0, value=90.0, step=0.1)
-        with col2: 
+        with col2:
             haemoglobin = st.number_input("Haemoglobin (g/dL)", min_value=0.0, value=13.5, step=0.1)
-        with col3: 
+        with col3:
             cholesterol = st.number_input("Cholesterol (mg/dL)", min_value=0.0, value=180.0, step=0.1)
         
         submitted = st.form_submit_button("Submit & Get AI Prediction")
-       
+        
         if submitted:
             data = {
                 "full_name": full_name.strip(),
@@ -214,25 +250,24 @@ if menu == "Add New Patient":
                 "haemoglobin": haemoglobin,
                 "cholesterol": cholesterol
             }
-           
+            
             errors = validate_patient(data)
             if errors:
                 for err in errors:
                     st.error(err)
             else:
-                with st.spinner("Generating AI Health Risk Prediction..."):
+                with st.spinner("Calling External AI API for Health Risk Prediction..."):
                     data["remarks"] = generate_remarks(data)
-               
+                
                 if create_patient(data):
-                    st.success(" Patient record saved successfully with AI prediction!")
+                    st.success("✅ Patient record saved successfully with AI prediction!")
                     st.write("**AI Prediction:**")
                     st.write(data["remarks"])
 
 # ====================== VIEW ALL PATIENTS ======================
 else:
     st.subheader("All Patient Records")
-   
-    # Initialize session state
+    
     if 'message' not in st.session_state:
         st.session_state.message = None
     if 'message_type' not in st.session_state:
@@ -240,7 +275,6 @@ else:
     if 'original_df' not in st.session_state:
         st.session_state.original_df = None
 
-    # Show persistent message
     if st.session_state.message:
         if st.session_state.message_type == "success":
             st.success(st.session_state.message)
@@ -250,9 +284,8 @@ else:
         st.session_state.message_type = None
 
     df = get_all_patients()
-   
+    
     if not df.empty:
-        # Store original dataframe for comparison
         if st.session_state.original_df is None or len(st.session_state.original_df) != len(df):
             st.session_state.original_df = df.copy()
 
@@ -260,50 +293,43 @@ else:
             df,
             hide_index=False,
             width='stretch',
-            # use_container_width=True,
             column_config={
                 "id": st.column_config.NumberColumn(disabled=True),
                 "created_at": st.column_config.DatetimeColumn(disabled=True),
                 "remarks": st.column_config.TextColumn(disabled=False, width="medium"),
             },
-            key="patient_editor"  # Important for consistency
+            key="patient_editor"
         )
-       
+        
         col1, col2 = st.columns([1, 1])
         with col1:
             if st.button("💾 Save Changes", type="primary"):
                 try:
                     success_count = 0
                     updated_count = 0
-                    
-                    # Compare edited vs original
                     for idx, row in edited_df.iterrows():
                         original_row = st.session_state.original_df.loc[
                             st.session_state.original_df['id'] == row['id']
                         ].iloc[0]
-                        
-                        # Check if row has changed
                         if not row.equals(original_row):
                             if update_patient(row['id'], row.to_dict()):
                                 success_count += 1
                             updated_count += 1
                     
                     if success_count > 0:
-                        st.session_state.message = f" {success_count} record(s) updated successfully!"
+                        st.session_state.message = f"{success_count} record(s) updated successfully!"
                         st.session_state.message_type = "success"
                     elif updated_count == 0:
                         st.session_state.message = "ℹ️ No changes detected."
                         st.session_state.message_type = "success"
                     else:
-                        st.session_state.message = " Failed to update some records."
+                        st.session_state.message = "Failed to update some records."
                         st.session_state.message_type = "error"
                     
-                    # Refresh original data
                     st.session_state.original_df = None
                     st.rerun()
-                    
                 except Exception as e:
-                    st.session_state.message = f" Error saving changes: {str(e)}"
+                    st.session_state.message = f"Error saving changes: {str(e)}"
                     st.session_state.message_type = "error"
                     st.rerun()
         
@@ -311,21 +337,16 @@ else:
             delete_id = st.number_input("Delete by ID", min_value=1, step=1, key="delete_input")
             if st.button("🗑️ Delete Record", type="secondary"):
                 if delete_patient(delete_id):
-                    st.session_state.message = f" Record {delete_id} deleted successfully!"
+                    st.session_state.message = f"Record {delete_id} deleted successfully!"
                     st.session_state.message_type = "success"
-                    st.session_state.original_df = None  # Reset for refresh
+                    st.session_state.original_df = None
                     st.rerun()
                 else:
-                    st.session_state.message = f" Failed to delete record {delete_id}"
+                    st.session_state.message = f"Failed to delete record {delete_id}"
                     st.session_state.message_type = "error"
                     st.rerun()
     else:
         st.info("No patient records found yet.")
-
-
-
-
-
 
 
 
