@@ -244,11 +244,9 @@ Example:
 
 ---
 
-<<<<<<< HEAD
+
 #  Future Improvements
 =======
-# 🚀 Future Improvements
->>>>>>> 59bee06c893183518d85825cbf180da49fd57287
 
 - User authentication
 - Search and filter functionality
