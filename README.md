@@ -246,7 +246,7 @@ Example:
 
 
 #  Future Improvements
-=======
+
 
 - User authentication
 - Search and filter functionality
@@ -261,4 +261,4 @@ Example:
 
 **Sindhiya Maria**
 
-Submitted as part of the **Junior AI/ML Developer Technical Assessment**.
+Submitted as part of the ** AI/ML Developer **.
