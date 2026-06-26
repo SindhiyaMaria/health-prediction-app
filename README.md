@@ -6,7 +6,7 @@ The application enables users to manage patient records using full **CRUD (Creat
 
 ---
 
-## ✨ Features
+##  Features
 
 - ✅ Create, Read, Update, and Delete (CRUD) patient records
 - ✅ PostgreSQL database integration
@@ -24,7 +24,7 @@ The application enables users to manage patient records using full **CRUD (Creat
 
 ---
 
-## 🛠 Tech Stack
+##  Tech Stack
 
 | Component | Technology |
 |-----------|------------|
@@ -53,7 +53,7 @@ health-prediction-app/
 
 ---
 
-# 🚀 Installation
+#  Installation
 
 ## 1. Clone the Repository
 
@@ -140,7 +140,7 @@ http://localhost:8501
 
 ---
 
-# 🤖 AI Integration
+#  AI Integration
 
 This project uses the **Groq External API** with the **Llama 3.3 70B Versatile** model to generate health risk predictions based on patient blood test parameters.
 
@@ -232,7 +232,7 @@ Example:
 
 ---
 
-# 🚀 Future Improvements
+#  Future Improvements
 
 - User authentication
 - Search and filter functionality
