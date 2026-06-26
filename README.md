@@ -218,7 +218,9 @@ Add screenshots after uploading them to the `images` folder.
 images/home.png
 images/patient-list.png
 images/ai-prediction.png
-
+images/patient-update-detail.png
+images/patient-delete-detail.png
+images/patient-view.png
 ```
 
 Example:
@@ -230,11 +232,11 @@ Example:
 
 ![AI Prediction](images/ai-prediction.png)
 
-![Update Patient Records](images\patient-update-detail.png)
+![Update Patient Records](images/patient-update-detail.png)
 
-![Delete Patient Records](images\patient-delete-detail.png)
+![Delete Patient Records](images/patient-delete-detail.png)
 
-![View Patient Records](images\patient-view.png)
+![View Patient Records](images/patient-view.png)
 
 
 
